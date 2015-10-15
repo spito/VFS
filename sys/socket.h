@@ -1,9 +1,9 @@
 #ifndef _SYS_SOCKET_H
 #define _SYS_SOCKET_H  1
 
-#include <sys/uio.h>
+#include "uio.h"
 #include <stddef.h>
-#include <unistd.h>     /* For ssize_t. */
+#include "../unistd.h"     /* For ssize_t. */
 
 #ifdef __cplusplus
 extern "C" {

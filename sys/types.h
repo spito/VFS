@@ -3,10 +3,15 @@
 #ifndef _SYS_TYPES_H_
 #define _SYS_TYPES_H_
 
-#include <bits/types.h>
-
 // size_t
 #include <stddef.h>
+
+#ifdef VFS_STANDALONE
+#include <sys/types.h>
+typedef __socklen_t         socklen_t;
+#else
+#include "bits/types.h"
+
 
 typedef __intptr_t          ssize_t;
 
@@ -38,5 +43,7 @@ typedef __u_int             u_int;
 typedef __u_long            u_long;
 typedef __uint16_t          u_int16_t;
 typedef __uint32_t          u_int32_t;
+
+#endif
 
 #endif // _SYS_TYPES_H_
