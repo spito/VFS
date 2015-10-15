@@ -406,7 +406,7 @@ private:
     bool _closed = false;
 };
 
-inline void swap( Address &lhs, Address &rhs ) {
+inline void swap( Socket::Address &lhs, Socket::Address &rhs ) {
     lhs.swap( rhs );
 }
 
