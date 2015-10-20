@@ -76,7 +76,7 @@ struct FileDescriptor {
 
     //TODO nemalo by to vracat length miesto bool?
     //virtual bool read( utils::Vector< std::pair< char *, size_t > >, size_t & )
-    //size_t & vrací, kolik se toho opravdu přečetlo/zapsalo
+	//size_t & vrací, kolik se toho opravdu přečetlo/zapsalo
     virtual bool read( utils::Vector< std::pair< char *, size_t > >buf, size_t &length ) {
         if (!_inode)
             throw Error( EBADF );
@@ -89,17 +89,17 @@ struct FileDescriptor {
         if (_flags.has( flags::Open::NonBlock ) && !file->canRead())
             throw Error( EAGAIN );
 
-        length = 0;		//combined length of all members of buf
+		length = 0;		//combined length of all members of buf
         for (auto dst : buf) {
             if (!file->read( dst.first, _offset, dst.second )) {
                 throw Error( EBADF );
-            }
+			}
             _setOffset( _offset + dst.second );
-            length += dst.second;
-        }
+			length += dst.second;
+		}
         /*char *dst = reinterpret_cast< char * >( buf );	//original
         if ( !file->read( dst, _offset, length ) )
-        throw Error( EBADF );*/
+            throw Error( EBADF );*/
 
         //_setOffset( _offset + length );
         return true;
@@ -128,38 +128,38 @@ struct FileDescriptor {
         return length;
     }
 
-    //TODO
+	//TODO
     virtual bool write( utils::Vector< std::pair< const char *, size_t > >buf, size_t &length ) {
-        if (!_inode)
+		if (!_inode)
             throw Error( EBADF );
         if (!_flags.has( flags::Open::Write ))
             throw Error( EBADF );
 
-        File *file = _inode->data()->as< File >();
-        if (!file)
+		File *file = _inode->data()->as< File >();
+		if (!file)
             throw Error( EBADF );
         if (_flags.has( flags::Open::NonBlock ) && !file->canWrite())
             throw Error( EAGAIN );
 
         if (_flags.has( flags::Open::Append ))
-            _offset = file->size();
+			_offset = file->size();
 
-        length = 0;
-        for (auto src : buf) {
+		length = 0;
+		for (auto src : buf) {
             if (!file->write( src.first, _offset, src.second )) {
                 throw Error( EBADF );
-            }
+			}
             _setOffset( _offset + src.second );
-            length += src.second;
-        }
+			length += src.second;
+		}
 
-        /*const char *src = reinterpret_cast< const char * >(buf);		//original
-        if (!file->write(src, _offset, length))
-        throw Error(EBADF);*/
+		/*const char *src = reinterpret_cast< const char * >(buf);		//original
+		if (!file->write(src, _offset, length))
+			throw Error(EBADF);*/
 
-        //_setOffset(_offset + length);
-        return true;
-    }
+		//_setOffset(_offset + length);
+		return true;
+	}
 
     size_t offset() const {
         return _offset;
