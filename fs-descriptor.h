@@ -76,8 +76,8 @@ struct FileDescriptor {
     //TODO nemalo by to vracat length miesto bool?
     //virtual bool read( utils::Vector< std::pair< char *, size_t > >, size_t & ) od JW
 	//size_t & vrací, kolik se toho opravdu přečetlo/zapsalo
-	virtual bool read(utils::Vector< std::pair< char *, size_t > >buf, size_t &length) {
-        if ( !_inode )
+    virtual bool read(utils::Vector< std::pair< char *, size_t > >buf, size_t &length) {
+       	if ( !_inode )
             throw Error( EBADF );
         if ( !_flags.has( flags::Open::Read ) )
             throw Error( EBADF );
