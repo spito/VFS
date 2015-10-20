@@ -236,7 +236,7 @@ ssize_t write( int fd, const void *buf, size_t count ) {
         return -1;
     }
 }
-ssize_t pwrite( int fd, const void *buf, size_t count, off_t offset ) {
+ssize_t pwrite( int fd, const void *buf, size_t count, off_t offset ) {		//TODO this
     FS_ENTRYPOINT();
     try {
         auto f = vfs.instance().getFile( fd );
@@ -258,7 +258,7 @@ ssize_t read( int fd, void *buf, size_t count ) {
         return -1;
     }
 }
-ssize_t pread( int fd, void *buf, size_t count, off_t offset ) {
+ssize_t pread( int fd, void *buf, size_t count, off_t offset ) {    //TODO this
     FS_ENTRYPOINT();
     try {
         auto f = vfs.instance().getFile( fd );
