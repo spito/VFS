@@ -410,22 +410,9 @@ inline void swap( Socket::Address &lhs, Socket::Address &rhs ) {
     lhs.swap( rhs );
 }
 
-} // namespace fs
-} // namespace divine
-
-namespace std {
-template<>
-struct hash< ::divine::fs::Socket::Address > {
-    size_t operator()( const ::divine::fs::Socket::Address &a ) const {
-        return hash< ::divine::fs::utils::String >()( a.value() );
-    }
-};
-
-} // namespace std
-
 namespace divine {
 namespace fs {
-
+#endif
 struct SocketStream : Socket {
 
     SocketStream() :
@@ -460,7 +447,7 @@ struct SocketStream : Socket {
         _passive = true;
         _limit = limit;
     }
-    Node accept() {
+    Node accept() override {
         if ( !_passive )
             throw Error( EINVAL );
 
