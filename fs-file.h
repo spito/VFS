@@ -412,7 +412,7 @@ inline void swap( Socket::Address &lhs, Socket::Address &rhs ) {
 
 namespace divine {
 namespace fs {
-#endif
+
 struct SocketStream : Socket {
 
     SocketStream() :
