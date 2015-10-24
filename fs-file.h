@@ -35,7 +35,8 @@ private:
 };
 
 struct File : DataItem {
-
+    //TODO lower: napisat dokumentaciu pretieto fcie (sem)
+    //TODO dopisat deklaracie pre moje read, write pre vector buf
     virtual bool read( char *, size_t, size_t & ) = 0;
     virtual bool write( const char *, size_t, size_t & ) = 0;
 
@@ -73,20 +74,22 @@ struct RegularFile : File {
         return true;
     }
 
+    //TODO spravit funkciu pre vector buf 
     bool read( char *buffer, size_t offset, size_t &length ) override {
         if ( offset >= _size ) {
             length = 0;
             return true;
         }
-        const char *source = _isSnapshot() ?
+        const char *source = _isSnapshot() ?            //copy on write
                           _roContent + offset :
                           _content.data() + offset;
-        if ( offset + length > _size )
+        if ( offset + length > _size )                  //TODO prepisat tieto 3 riadky :D
             length = _size - offset;
         std::copy( source, source + length, buffer );
         return true;
     }
 
+    //TODO spravit fciu pre vector buf
     bool write( const char *buffer, size_t offset, size_t &length ) override {
         if ( _isSnapshot() )
             _copyOnWrite();

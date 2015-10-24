@@ -77,7 +77,10 @@ struct FileDescriptor {
     //TODO nemalo by to vracat length miesto bool?
     //virtual bool read( utils::Vector< std::pair< char *, size_t > >, size_t & )
     //size_t & vrací, kolik se toho opravdu přečetlo/zapsalo
-    virtual bool read( utils::Vector< std::pair< char *, size_t > >buf, size_t &length ) {
+
+    //TODO zmenit na volanie mojej metody v fs-file regularfile (proste predam argument buf tej metode )
+    //TODO nech vracia length, size_t &length netreba
+    virtual bool read( utils::Vector< std::pair< char *, size_t > >buf ) {
         if (!_inode)
             throw Error( EBADF );
         if (!_flags.has( flags::Open::Read ))
@@ -128,7 +131,8 @@ struct FileDescriptor {
         return length;
     }
 
-    //TODO
+    //TODO zmenit na volanie mojej metody v fs-file regularfile (proste predam argument buf tej metode )
+    //TODO nech vracia length, size_t &length netreba
     virtual bool write( utils::Vector< std::pair< const char *, size_t > >buf, size_t &length ) {
         if (!_inode)
             throw Error( EBADF );
