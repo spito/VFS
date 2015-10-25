@@ -6,7 +6,7 @@
 // size_t
 #include <stddef.h>
 
-#ifdef VFS_STANDALONE
+#ifndef __divine__
 #include <sys/types.h>
 typedef __socklen_t         socklen_t;
 #else

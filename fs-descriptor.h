@@ -80,7 +80,7 @@ struct FileDescriptor {
 
     //TODO zmenit na volanie mojej metody v fs-file regularfile (proste predam argument buf tej metode )
     //TODO nech vracia length, size_t &length netreba
-    virtual bool read( utils::Vector< std::pair< char *, size_t > >buf ) {
+    virtual long long read( utils::Vector< std::pair< char *, size_t > >buf ) {
         if (!_inode)
             throw Error( EBADF );
         if (!_flags.has( flags::Open::Read ))
@@ -92,7 +92,7 @@ struct FileDescriptor {
         if (_flags.has( flags::Open::NonBlock ) && !file->canRead())
             throw Error( EAGAIN );
 
-        length = 0;		//combined length of all members of buf
+        long long length = 0;		//combined length of all members of buf
         for (auto dst : buf) {
             if (!file->read( dst.first, _offset, dst.second )) {
                 throw Error( EBADF );
@@ -100,12 +100,7 @@ struct FileDescriptor {
             _setOffset( _offset + dst.second );
             length += dst.second;
         }
-        /*char *dst = reinterpret_cast< char * >( buf );	//original
-        if ( !file->read( dst, _offset, length ) )
-        throw Error( EBADF );*/
-
-        //_setOffset( _offset + length );
-        return true;
+        return length;
     }
 
     virtual long long write( const void *buf, size_t length ) {
@@ -133,7 +128,7 @@ struct FileDescriptor {
 
     //TODO zmenit na volanie mojej metody v fs-file regularfile (proste predam argument buf tej metode )
     //TODO nech vracia length, size_t &length netreba
-    virtual bool write( utils::Vector< std::pair< const char *, size_t > >buf, size_t &length ) {
+    virtual long long write( utils::Vector< std::pair< const char *, size_t > >buf) {
         if (!_inode)
             throw Error( EBADF );
         if (!_flags.has( flags::Open::Write ))
@@ -148,7 +143,7 @@ struct FileDescriptor {
         if (_flags.has( flags::Open::Append ))
             _offset = file->size();
 
-        length = 0;
+        long long length = 0;
         for (auto src : buf) {
             if (!file->write( src.first, _offset, src.second )) {
                 throw Error( EBADF );
@@ -157,12 +152,7 @@ struct FileDescriptor {
             length += src.second;
         }
 
-        /*const char *src = reinterpret_cast< const char * >(buf);		//original
-        if (!file->write(src, _offset, length))
-        throw Error(EBADF);*/
-
-        //_setOffset(_offset + length);
-        return true;
+        return length;
     }
 
     size_t offset() const {

@@ -74,7 +74,7 @@ struct RegularFile : File {
         return true;
     }
 
-    //TODO spravit funkciu pre vector buf 
+
     bool read( char *buffer, size_t offset, size_t &length ) override {
         if ( offset >= _size ) {
             length = 0;
@@ -83,9 +83,31 @@ struct RegularFile : File {
         const char *source = _isSnapshot() ?            //copy on write
                           _roContent + offset :
                           _content.data() + offset;
+
+        if ( offset + length > _size )
+            length = _size - offset;
+        std::copy( source, source + length, buffer );
+
+        return true;
+    }
+
+    //TODO spravit funkciu pre vector buf
+    bool read( utils::Vector< std::pair< char *, size_t > >buf, size_t offset, size_t &length ) override {
+
+        if ( offset >= _size ) {
+            length = 0;
+            return true;
+        }
+        const char *source = _isSnapshot() ?            //copy on write
+                             _roContent + offset :
+                             _content.data() + offset;
+
+
+
         if ( offset + length > _size )                  //TODO prepisat tieto 3 riadky :D
             length = _size - offset;
         std::copy( source, source + length, buffer );
+
         return true;
     }
 
@@ -413,22 +435,6 @@ inline void swap( Socket::Address &lhs, Socket::Address &rhs ) {
     lhs.swap( rhs );
 }
 
-} // namespace fs
-} // namespace divine
-
-namespace std {
-template<>
-struct hash< ::divine::fs::Socket::Address > {
-    size_t operator()( const ::divine::fs::Socket::Address &a ) const {
-        return hash< ::divine::fs::utils::String >()( a.value() );
-    }
-};
-
-} // namespace std
-
-namespace divine {
-namespace fs {
-
 struct SocketStream : Socket {
 
     SocketStream() :
@@ -463,7 +469,7 @@ struct SocketStream : Socket {
         _passive = true;
         _limit = limit;
     }
-    Node accept() {
+    Node accept() override {
         if ( !_passive )
             throw Error( EINVAL );
 
