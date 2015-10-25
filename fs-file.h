@@ -36,9 +36,11 @@ private:
 
 struct File : DataItem {
     //TODO lower: napisat dokumentaciu pretieto fcie (sem)
-    //TODO dopisat deklaracie pre moje read, write pre vector buf
+    //TODO done dopisat deklaracie pre moje read, write pre vector buf
     virtual bool read( char *, size_t, size_t & ) = 0;
+    virtual bool read( utils::Vector< std::pair< char *, size_t > > &buf, size_t offset, size_t &length) = 0;
     virtual bool write( const char *, size_t, size_t & ) = 0;
+    virtual bool write( utils::Vector< std::pair< const char *, size_t > > &buf, size_t offset, size_t &length ) = 0;
 
     virtual void clear() = 0;
     virtual bool canRead() const = 0;
