@@ -156,7 +156,7 @@ struct RegularFile : File {
 
         length = 0;
         for (const auto & item : buf) {
-            std::copy(item.first, item.first + item1.second, _content.begin() + offset);
+            std::copy(item.first, item.first + item.second, _content.begin() + offset);
             offset += item.second;
             length += item.second;
         }

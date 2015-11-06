@@ -74,12 +74,8 @@ struct FileDescriptor {
         return length;
     }
 
-    //TODO nemalo by to vracat length miesto bool?
     //virtual bool read( utils::Vector< std::pair< char *, size_t > >, size_t & )
-    //size_t & vrací, kolik se toho opravdu přečetlo/zapsalo
-
     //TODO zmenit na volanie mojej metody v fs-file regularfile (proste predam argument buf tej metode )
-    //TODO nech vracia length, size_t &length netreba
     virtual long long read( utils::Vector< std::pair< char *, size_t > > &buf ) {
         if (!_inode)
             throw Error( EBADF );
@@ -92,9 +88,9 @@ struct FileDescriptor {
         if (_flags.has( flags::Open::NonBlock ) && !file->canRead())
             throw Error( EAGAIN );
 
-        long long length = 0;		//combined length of all members of buf
+        size_t length = 0;		//combined length of all members of buf
         if ( !file->read(buf, _offset, length )) {
-                throw Error( EBADF );
+            throw Error( EBADF );
         }
         _setOffset( _offset + length );
 //        for (auto & dst : buf) {
@@ -131,7 +127,6 @@ struct FileDescriptor {
     }
 
     //TODO zmenit na volanie mojej metody v fs-file regularfile (proste predam argument buf tej metode )
-    //TODO nech vracia length, size_t &length netreba
     virtual long long write( utils::Vector< std::pair< const char *, size_t > > &buf) {
         if (!_inode)
             throw Error( EBADF );
@@ -147,7 +142,7 @@ struct FileDescriptor {
         if (_flags.has( flags::Open::Append ))
             _offset = file->size();
 
-        long long length = 0;
+        size_t length = 0;
         if ( !file->write( buf, _offset, length )) {
             throw Error( EBADF );
         }
