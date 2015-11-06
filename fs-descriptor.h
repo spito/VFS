@@ -88,10 +88,14 @@ struct FileDescriptor {
 
         long long length = 0;		//combined length of all members of buf
         for ( auto & dst : buf ) {
+            size_t originalLengthBuf = dst.second;
             if ( !file->read( dst.first, _offset, dst.second ))
-                throw Error( EBADF );
+                throw Error( EBADF );           
             length += dst.second;
             _setOffset( _offset + dst.second );
+            if (dst.second < originalLengthBuf) {      //nothing left to read
+                break;
+            }
         }
         
         return length;
@@ -135,7 +139,7 @@ struct FileDescriptor {
         if (_flags.has( flags::Open::Append ))
             _offset = file->size();
 
-        size_t length = 0;
+        long long length = 0;
         for (auto & src : buf) {
             if (!file->write( src.first, _offset, src.second )) {
                 throw Error( EBADF );

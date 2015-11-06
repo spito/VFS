@@ -72,8 +72,7 @@ struct RegularFile : File {
     bool canWrite() const override {
         return true;
     }
-
-
+    
     bool read( char *buffer, size_t offset, size_t &length ) override {
         if ( offset >= _size ) {
             length = 0;
