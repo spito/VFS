@@ -74,8 +74,6 @@ struct FileDescriptor {
         return length;
     }
 
-    //virtual bool read( utils::Vector< std::pair< char *, size_t > >, size_t & )
-    //TODO zmenit na volanie mojej metody v fs-file regularfile (proste predam argument buf tej metode )
     virtual long long read( utils::Vector< std::pair< char *, size_t > > &buf ) {
         if (!_inode)
             throw Error( EBADF );
@@ -85,21 +83,17 @@ struct FileDescriptor {
         File *file = _inode->data()->as< File >();
         if (!file)
             throw Error( EBADF );
-        if (_flags.has( flags::Open::NonBlock ) && !file->canRead())
+        if (_flags.has( flags::Open::NonBlock ) && !file->canRead())   
             throw Error( EAGAIN );
 
-        size_t length = 0;		//combined length of all members of buf
-        if ( !file->read(buf, _offset, length )) {
-            throw Error( EBADF );
+        long long length = 0;		//combined length of all members of buf
+        for ( auto & dst : buf ) {
+            if ( !file->read( dst.first, _offset, dst.second ))
+                throw Error( EBADF );
+            length += dst.second;
+            _setOffset( _offset + dst.second );
         }
-        _setOffset( _offset + length );
-//        for (auto & dst : buf) {
-//            if (!file->read( dst.first, _offset, dst.second )) {
-//                throw Error( EBADF );
-//            }
-//            _setOffset( _offset + dst.second );
-//            length += dst.second;
-//        }
+        
         return length;
     }
 
@@ -126,7 +120,6 @@ struct FileDescriptor {
         return length;
     }
 
-    //TODO zmenit na volanie mojej metody v fs-file regularfile (proste predam argument buf tej metode )
     virtual long long write( utils::Vector< std::pair< const char *, size_t > > &buf) {
         if (!_inode)
             throw Error( EBADF );
@@ -143,17 +136,13 @@ struct FileDescriptor {
             _offset = file->size();
 
         size_t length = 0;
-        if ( !file->write( buf, _offset, length )) {
-            throw Error( EBADF );
+        for (auto & src : buf) {
+            if (!file->write( src.first, _offset, src.second )) {
+                throw Error( EBADF );
+            }
+            _setOffset( _offset + src.second );
+            length += src.second;
         }
-        _setOffset( _offset + length );
-//        for (auto src : buf) {
-//            if (!file->write( src.first, _offset, src.second )) {
-//                throw Error( EBADF );
-//            }
-//            _setOffset( _offset + src.second );
-//            length += src.second;
-//        }
 
         return length;
     }

@@ -35,12 +35,9 @@ private:
 };
 
 struct File : DataItem {
-    //TODO lower: napisat dokumentaciu pretieto fcie (sem)
-    //TODO done dopisat deklaracie pre moje read, write pre vector buf
+    //TODO lower: write documentation
     virtual bool read( char *, size_t, size_t & ) = 0;
-    virtual bool read( utils::Vector< std::pair< char *, size_t > > &buf, size_t offset, size_t &length) = 0;
     virtual bool write( const char *, size_t, size_t & ) = 0;
-    virtual bool write( utils::Vector< std::pair< const char *, size_t > > &buf, size_t offset, size_t &length ) = 0;
 
     virtual void clear() = 0;
     virtual bool canRead() const = 0;
@@ -93,43 +90,6 @@ struct RegularFile : File {
         return true;
     }
 
-    //TODO spravit funkciu pre vector buf
-    /**
-     * vector predat referenciou (lebo donho zapisujem)
-     */
-    bool read( utils::Vector< std::pair< char *, size_t > > &buf, size_t offset, size_t &length) override {
-
-//        if ( offset >= _size ) {
-//            length = 0;
-//            return true;
-//        }
-//        const char *source = _isSnapshot() ?            //copy on write
-//                             _roContent + offset :
-//                             _content.data() + offset;
-
-        length = 0;
-        for (auto & item : buf) {
-            if ( offset >= _size ) {    // EOF found
-                //length = 0;
-                return true;
-            }
-            const char *source = _isSnapshot() ?            //copy on write
-                                 _roContent + offset :
-                                 _content.data() + offset;
-
-            if (offset + item.second > _size) {
-                item.second = _size - offset;
-            }
-
-            std::copy(source, source + item.second, item.first);
-            length += item.second;
-            offset += item.second;
-
-        }
-
-        return true;
-    }
-
     bool write( const char *buffer, size_t offset, size_t &length ) override {
         if ( _isSnapshot() )
             _copyOnWrite();
@@ -138,29 +98,6 @@ struct RegularFile : File {
             resize( offset + length );
 
         std::copy( buffer, buffer + length, _content.begin() + offset );
-        return true;
-    }
-
-    //TODO spravit fciu pre vector buf
-    bool write( utils::Vector< std::pair< const char *, size_t > > &buf, size_t offset, size_t &length ) override {
-        if ( _isSnapshot() )
-            _copyOnWrite();
-
-        size_t sumLengthBuf = 0;
-        for (const auto & item : buf ) {            //compute sum of buf lengths
-            sumLengthBuf += item.second;
-        }
-        if ( _content.size() < offset + sumLengthBuf ) {
-            resize(offset + sumLengthBuf);
-        }
-
-        length = 0;
-        for (const auto & item : buf) {
-            std::copy(item.first, item.first + item.second, _content.begin() + offset);
-            offset += item.second;
-            length += item.second;
-        }
-
         return true;
     }
 
