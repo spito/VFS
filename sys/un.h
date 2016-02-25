@@ -1,7 +1,7 @@
 #ifndef _SYS_UN_H
 #define _SYS_UN_H  1
 
-#include <bits/sockaddr.h>
+#include "../bits/sockaddr.h"
 
 #define UNIX_PATH_MAX  107
 

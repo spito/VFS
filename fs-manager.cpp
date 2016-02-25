@@ -700,5 +700,46 @@ void Manager::_chmod( Node inode, mode_t mode ) {
         ( mode & Mode::CHMOD );
 }
 
+void * Manager::mmap(int fd, off_t length, off_t offset, Flags<flags::Mapping> flags) {
+    if (length <= 0)
+        throw Error ( EINVAL );
+    Memory *directory;
+    if (flags.has(flags::Mapping::MapAnon)) {
+        directory = new Memory(flags,length, 0, nullptr);
+    }else {
+        auto file = vfs.instance().getFile(fd)->getFile();
+        directory = new Memory(flags, length, offset, file);
+    }
+    if (directory->getPtr()) {
+        insertMemory(directory);
+    }
+    return directory->getPtr();
+}
+
+
+void Manager::munmap(void *directory) {
+    for ( auto it : _mapedMemory ) {
+        if (it != nullptr and it->returnPtr(directory)) {
+            delete it;
+            it = nullptr;
+            return;
+        }
+    }
+    throw Error ( EBADF );
+}
+
+int Manager::insertMemory(Memory *descriptor){
+    int i = 0;
+    for ( auto it : _mapedMemory ) {
+        if (!it) {
+            it = descriptor;
+            return i;
+        }
+        ++i;
+    }
+    _mapedMemory.push_back(descriptor);
+    return i;
+}
+
 } // namespace fs
 } // namespace divine

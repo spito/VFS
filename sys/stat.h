@@ -24,7 +24,8 @@
 #define	_SYS_STAT_H	1
 
 #include <sys/types.h>
-#include <bits/stat.h>
+#include "../bits/stat.h"
+typedef __darwin_socklen_t  socklen_t;
 
 #ifdef __cplusplus
 extern "C" {
