@@ -32,6 +32,31 @@
 
 #define O_LARGEFILE   0100000
 
+
+/* Protections are chosen from these bits, OR'd together.  The
+   implementation does not necessarily support PROT_EXEC or PROT_WRITE
+   without PROT_READ.  The only guarantees are that no writing will be
+   allowed without PROT_WRITE and no access will be allowed for PROT_NONE. */
+
+#define	PROT_NONE	 0x00	/* No access.  */
+#define	PROT_READ	 0x04	/* Pages can be read.  */
+#define	PROT_WRITE	 0x02	/* Pages can be written.  */
+#define	PROT_EXEC	 0x01	/* Pages can be executed.  */
+#define	MAP_SHARED	 0x0010	/* Share changes.  */
+#define	MAP_PRIVATE	 0x0000	/* Changes private; copy pages on write.  */
+
+/*
+ * Flags contain sharing type and options.
+ * Sharing types; choose one.
+ */
+# define MAP_FILE	 0x0001	/* Mapped from a file or device.  */
+# define MAP_ANON	 0x0002	/* Allocated from anonymous virtual memory.  */
+# define MAP_TYPE	 0x000f	/* Mask for type field.  */
+# define MAP_ANONYMOUS	 MAP_ANON /* Linux name. */
+# define MAP_FIXED	 0x0100	/* Map address must be exactly as requested. */
+# define MAP_HASSEMPHORE 0x0400	/* Region may contain semaphores.  */
+
+
 /* Bits in the file status flags returned by F_GETFL.
    These are all the O_* flags, plus FREAD and FWRITE, which are
    independent bits set by which of O_RDONLY, O_WRONLY, and O_RDWR, was

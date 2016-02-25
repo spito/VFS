@@ -94,6 +94,14 @@ divine::fs::Flags< Message > message( int fls ) {
     if ( fls & MSG_WAITALL )    f |= Message::WaitAll;
     return f;
 }
+divine::fs::Flags< Mapping > map( int fls ) {
+    divine::fs::Flags< Mapping > f;
+
+    if ( fls & MAP_ANON )  { f |= Mapping::MapAnon; }
+    if ( fls & MAP_PRIVATE ) {  f |= Mapping::MapPrivate; }
+    if ( fls & MAP_SHARED )    {   f |= Mapping::MapShared; }
+    return f;
+}
 
 } // namespace conversion
 
@@ -1099,6 +1107,32 @@ int accept4( int sockfd, struct sockaddr *addr, socklen_t *len, int flags ) {
     } catch ( Error & ) {
         return -1;
     }
+}
+
+void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset) {
+    FS_ENTRYPOINT();
+    if (flags & MAP_FIXED) {
+        errno = ENOMEM;
+        return nullptr;
+    }
+    try {
+        return vfs.instance().mmap(fd, len, offset, conversion::map(flags));
+    } catch ( Error & ) {
+        return nullptr;
+    }
+}
+
+
+int munmap(void *addr, size_t len) {
+    if (addr != nullptr) {
+        try {
+            vfs.instance().munmap(addr);
+            return 0;
+        }catch (Error &){
+            return -1;
+        }
+    }
+    return -1;
 }
 
 } // extern "C"

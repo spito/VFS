@@ -143,7 +143,7 @@ enum __socket_type
 #define SOMAXCONN  128
 
 /* Get the definition of the macro to define the common sockaddr members.  */
-#include <bits/sockaddr.h>
+#include "../bits/sockaddr.h"
 
 /* Structure describing a generic socket address.  */
 struct sockaddr {

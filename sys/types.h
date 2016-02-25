@@ -7,8 +7,11 @@
 #include <stddef.h>
 
 #ifndef __divine__
-#include <sys/types.h>
+#if defined( __MAC_OS_X_VERSION_MAX_ALLOWED )
+typedef __darwin_socklen_t         socklen_t;
+#elif
 typedef __socklen_t         socklen_t;
+#endif
 #else
 #include "bits/types.h"
 

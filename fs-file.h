@@ -13,6 +13,11 @@
 namespace divine {
 namespace fs {
 
+enum MemoryType{
+    Shared = 0,
+    Private = 1,
+};
+
 struct Link : DataItem {
 
     Link( utils::String target ) :
@@ -36,12 +41,27 @@ private:
 
 struct File : DataItem {
 
+    File() : count(0) { }
     virtual bool read( char *, size_t, size_t & ) = 0;
     virtual bool write( const char *, size_t, size_t & ) = 0;
 
     virtual void clear() = 0;
     virtual bool canRead() const = 0;
     virtual bool canWrite() const = 0;
+    bool isLocked() const {
+        return count != 0;
+    }
+
+    void unlockWrite() {
+        --count;
+    }
+
+    void lockWrite() {
+        ++count;
+    }
+
+private:
+    int count;
 };
 
 struct RegularFile : File {
@@ -109,6 +129,10 @@ struct RegularFile : File {
     void resize( size_t length ) {
         _content.resize( length );
         _size = _content.size();
+    }
+
+    char* getPtr(size_t offset)  {
+        return &(_content.begin()+offset).operator*();
     }
 
 private:
@@ -700,6 +724,60 @@ private:
     utils::Queue< Packet > _packets;
     WeakNode _defaultRecipient;
 
+};
+
+struct Memory {
+
+    Memory(Flags< flags::Mapping > flags, size_t length, size_t offset, File *target) :  offset(offset) {
+        if ( flags.has(flags::Mapping::MapAnon) ) {
+            type = Private;
+            memory = new(memory::nofail) char[length];
+            memset(memory,0,length);
+            if (memory == nullptr)
+                throw Error( ENOMEM );
+        } else {
+            file = target->as<RegularFile>();
+            if (!file)
+                return;
+            if (flags.has(flags::Mapping::MapPrivate)) {
+                type = Private;
+                memory = new(memory::nofail) char[length];
+                char *dst = reinterpret_cast< char * >( memory );
+                target->read(dst, offset, length);
+            }else {
+                type = Shared;
+                file->lockWrite();
+            }
+        }
+    }
+    void *getPtr() const{
+        if ( type == Private ) {
+            return memory;
+        }
+        return file ? file->getPtr(offset) : nullptr;
+    }
+
+    bool returnPtr(void* address) {
+        if ( type == Private && address == memory) {
+            delete[] memory;
+            return true;
+        }
+        if ( type == Shared && address == file->getPtr(offset)) {
+            file->unlockWrite();
+            return true;
+        }
+        return false;
+    }
+
+    ~Memory() = default;
+
+private:
+    MemoryType type;
+    size_t offset;
+    union {
+        void *memory;
+        RegularFile *file;
+    };
 };
 
 } // namespace fs

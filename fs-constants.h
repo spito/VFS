@@ -68,6 +68,11 @@ enum class Message {
     WaitAll = 4,
 };
 
+enum class Mapping {
+    MapShared = 1,
+    MapPrivate = 2,
+    MapAnon = 4,
+};
 
 } // namespace flags
 
