@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <signal.h>
-#include <iostream>
 
 #include "fs-utils.h"
 #include "fs-inode.h"
