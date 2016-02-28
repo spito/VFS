@@ -129,12 +129,10 @@ struct FileDescriptor {
     Flags< flags::Open > flags() const {
         return _flags;
     }
+
     Flags< flags::Open > &flags() {
         return _flags;
     }
-//    File *getFile () {
-//        return _inode->data()->as< File >();
-//    }
 
 protected:
     virtual void _setOffset( size_t off ) {

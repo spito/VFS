@@ -701,26 +701,26 @@ void Manager::_chmod( Node inode, mode_t mode ) {
 }
 
 void * Manager::mmap(int fd, off_t length, off_t offset, Flags<flags::Mapping> flags) {
-    if (length <= 0)
+    if ( length <= 0 )
         throw Error ( EINVAL );
-    auto file = vfs.instance().getFile(fd)->inode()->data()->as< File >();
-    if (!file) {
+    auto file = vfs.instance().getFile( fd )->inode()->data()->as< File >();
+    if ( !file ) {
         throw Error( EBADF );
     }
-    std::unique_ptr< Memory > ptr(new Memory(flags, length, offset, file));
+    std::unique_ptr< Memory > ptr( new Memory(flags, length, offset, file));
     void* memory = ptr->getPtr();
-    if (!memory){
+    if ( !memory ){
         return nullptr;
     }
-    _mappedMemory.push_back(std::move(ptr));
+    _mappedMemory.push_back( std::move( ptr ));
     return memory;
 }
 
 
 void Manager::munmap(void *directory) {
     for ( auto i =_mappedMemory.begin(); i != _mappedMemory.end(); ++i ) {
-        if (i->get()->getPtr() == directory) {
-            _mappedMemory.erase(i);
+        if ( i->get()->getPtr() == directory ) {
+            _mappedMemory.erase( i );
             return;
         }
     }

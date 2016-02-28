@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <signal.h>
+#include <iostream>
 
 #include "fs-utils.h"
 #include "fs-inode.h"
@@ -41,27 +42,13 @@ private:
 
 struct File : DataItem {
 
-    File() : count(0) { }
     virtual bool read( char *, size_t, size_t & ) = 0;
     virtual bool write( const char *, size_t, size_t & ) = 0;
 
     virtual void clear() = 0;
     virtual bool canRead() const = 0;
     virtual bool canWrite() const = 0;
-    bool isLocked() const {
-        return count != 0;
-    }
 
-    void unlockWrite() {
-        --count;
-    }
-
-    void lockWrite() {
-        ++count;
-    }
-
-private:
-    int count;
 };
 
 struct RegularFile : File {
@@ -69,13 +56,15 @@ struct RegularFile : File {
     RegularFile( const char *content, size_t size ) :
         _snapshot( bool( content ) ),
         _size( content ? size : 0 ),
-        _roContent( content )
+        _roContent( content ),
+        count(0)
     {}
 
     RegularFile() :
         _snapshot( false ),
         _size( 0 ),
-        _roContent( nullptr )
+        _roContent( nullptr ),
+        count(0)
     {}
 
     RegularFile( const RegularFile &other ) = default;
@@ -108,6 +97,9 @@ struct RegularFile : File {
     }
 
     bool write( const char *buffer, size_t offset, size_t &length ) override {
+        if ( count ) {
+            throw Error( EBUSY );
+        }
         if ( _isSnapshot() )
             _copyOnWrite();
 
@@ -135,6 +127,14 @@ struct RegularFile : File {
         return &_content[offset];
     }
 
+    void unlockWrite() {
+        --count;
+    }
+
+    void lockWrite() {
+        ++count;
+    }
+
 private:
 
     bool _isSnapshot() const {
@@ -153,6 +153,7 @@ private:
     size_t _size;
     const char *_roContent;
     utils::Vector< char > _content;
+    int count;
 };
 
 struct WriteOnlyFile : File {
@@ -728,22 +729,24 @@ private:
 
 struct Memory {
 
-    Memory(Flags< flags::Mapping > flags, size_t length, size_t offset, File *target) :  offset(offset) {
-        if ( flags.has(flags::Mapping::MapAnon) ) {
+    Memory(Flags <flags::Mapping> flags, size_t length, size_t offset, File *target) : offset( offset ) {
+        if ( flags.has(flags::Mapping::MapAnon )) {
             type = Private;
-            memory = new(memory::nofail) char[length]();
-            if (memory == nullptr)
-                throw Error( ENOMEM );
+            memory = new( memory::nofail ) char[length]();
+            if ( memory == nullptr ) {
+                throw Error(ENOMEM);
+            }
         } else {
             file = target->as<RegularFile>();
-            if (!file)
+            if ( !file ) {
                 return;
-            if (flags.has(flags::Mapping::MapPrivate)) {
+            }
+            if ( flags.has( flags::Mapping::MapPrivate )) {
                 type = Private;
                 memory = new(memory::nofail) char[length];
                 char *dst = reinterpret_cast< char * >( memory );
                 target->read(dst, offset, length);
-            }else {
+            } else {
                 type = Shared;
                 file->lockWrite();
             }
@@ -751,17 +754,17 @@ struct Memory {
     }
 
     Memory(const Memory &) = delete;
-    Memory& operator=(const Memory&) = delete;
+    Memory &operator=(const Memory &) = delete;
 
-    void *getPtr() const{
+    void *getPtr() const {
         if ( type == Private ) {
             return memory;
         }
-        return file ? file->getPtr(offset) : nullptr;
+        return file ? file->getPtr( offset ) : nullptr;
     }
 
     ~Memory() {
-        if ( type == Private) {
+        if ( type == Private ) {
             delete[] memory;
         }
         if ( type == Shared ) {
@@ -772,7 +775,7 @@ struct Memory {
 private:
     MemoryType type;
     size_t offset;
-    union {
+    union{
         void *memory;
         RegularFile *file;
     };
