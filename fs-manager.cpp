@@ -703,42 +703,28 @@ void Manager::_chmod( Node inode, mode_t mode ) {
 void * Manager::mmap(int fd, off_t length, off_t offset, Flags<flags::Mapping> flags) {
     if (length <= 0)
         throw Error ( EINVAL );
-    Memory *directory;
-    if (flags.has(flags::Mapping::MapAnon)) {
-        directory = new Memory(flags,length, 0, nullptr);
-    }else {
-        auto file = vfs.instance().getFile(fd)->getFile();
-        directory = new Memory(flags, length, offset, file);
+    auto file = vfs.instance().getFile(fd)->inode()->data()->as< File >();
+    if (!file) {
+        throw Error( EBADF );
     }
-    if (directory->getPtr()) {
-        insertMemory(directory);
+    std::unique_ptr< Memory > ptr(new Memory(flags, length, offset, file));
+    void* memory = ptr->getPtr();
+    if (!memory){
+        return nullptr;
     }
-    return directory->getPtr();
+    _mappedMemory.push_back(std::move(ptr));
+    return memory;
 }
 
 
 void Manager::munmap(void *directory) {
-    for ( auto it : _mapedMemory ) {
-        if (it != nullptr and it->returnPtr(directory)) {
-            delete it;
-            it = nullptr;
+    for ( auto i =_mappedMemory.begin(); i != _mappedMemory.end(); ++i ) {
+        if (i->get()->getPtr() == directory) {
+            _mappedMemory.erase(i);
             return;
         }
     }
     throw Error ( EBADF );
-}
-
-int Manager::insertMemory(Memory *descriptor){
-    int i = 0;
-    for ( auto it : _mapedMemory ) {
-        if (!it) {
-            it = descriptor;
-            return i;
-        }
-        ++i;
-    }
-    _mapedMemory.push_back(descriptor);
-    return i;
 }
 
 } // namespace fs

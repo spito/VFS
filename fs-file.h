@@ -132,7 +132,7 @@ struct RegularFile : File {
     }
 
     char* getPtr(size_t offset)  {
-        return &(_content.begin()+offset).operator*();
+        return &_content[offset];
     }
 
 private:
@@ -731,8 +731,7 @@ struct Memory {
     Memory(Flags< flags::Mapping > flags, size_t length, size_t offset, File *target) :  offset(offset) {
         if ( flags.has(flags::Mapping::MapAnon) ) {
             type = Private;
-            memory = new(memory::nofail) char[length];
-            memset(memory,0,length);
+            memory = new(memory::nofail) char[length]();
             if (memory == nullptr)
                 throw Error( ENOMEM );
         } else {
@@ -750,6 +749,10 @@ struct Memory {
             }
         }
     }
+
+    Memory(const Memory &) = delete;
+    Memory& operator=(const Memory&) = delete;
+
     void *getPtr() const{
         if ( type == Private ) {
             return memory;
@@ -757,19 +760,14 @@ struct Memory {
         return file ? file->getPtr(offset) : nullptr;
     }
 
-    bool returnPtr(void* address) {
-        if ( type == Private && address == memory) {
+    ~Memory() {
+        if ( type == Private) {
             delete[] memory;
-            return true;
         }
-        if ( type == Shared && address == file->getPtr(offset)) {
+        if ( type == Shared ) {
             file->unlockWrite();
-            return true;
         }
-        return false;
     }
-
-    ~Memory() = default;
 
 private:
     MemoryType type;

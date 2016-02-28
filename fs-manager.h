@@ -122,7 +122,6 @@ struct Manager {
 
     DirectoryDescriptor *openDirectory( int fd );
     DirectoryDescriptor *getDirectory( void *descriptor );
-    int insertMemory(Memory *descriptor);
     void closeDirectory( void *descriptor );
 
     int socket( SocketType type, Flags< flags::Open > fl );
@@ -138,7 +137,7 @@ private:
     std::array< Node, 2 > _standardIO;
     utils::Vector< std::shared_ptr< FileDescriptor > > _openFD;
     utils::List< DirectoryDescriptor > _openDD;
-    utils::Vector < Memory* > _mapedMemory;
+    utils::Vector < std::unique_ptr< Memory > > _mappedMemory;
 
     unsigned short _umask;
 
