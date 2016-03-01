@@ -707,7 +707,10 @@ void * Manager::mmap(int fd, off_t length, off_t offset, Flags<flags::Mapping> f
     if ( !file ) {
         throw Error( EBADF );
     }
-    std::unique_ptr< Memory > ptr( new Memory(flags, length, offset, file));
+    std::unique_ptr< Memory > ptr(new (memory::nofail) Memory(flags, length, offset, file));
+    if (!ptr) {
+        throw Error ( ENOMEM );
+    }
     void* memory = ptr->getPtr();
     if ( !memory ){
         return nullptr;
