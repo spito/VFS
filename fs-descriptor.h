@@ -129,6 +129,7 @@ struct FileDescriptor {
     Flags< flags::Open > flags() const {
         return _flags;
     }
+
     Flags< flags::Open > &flags() {
         return _flags;
     }
