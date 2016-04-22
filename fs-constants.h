@@ -19,6 +19,7 @@ enum class Seek {
 enum class SocketType {
     Stream,
     Datagram,
+    SeqPacket
 };
 
 const int CURRENT_DIRECTORY = -100;

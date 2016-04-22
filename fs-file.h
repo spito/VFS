@@ -399,6 +399,7 @@ struct Socket : File {
     }
 
     virtual Socket &peer() = 0;
+    virtual Socket &peerHandle() = 0;
 
     virtual bool canReceive( size_t ) const = 0;
     virtual bool canConnect() const = 0;
@@ -434,29 +435,36 @@ inline void swap( Socket::Address &lhs, Socket::Address &rhs ) {
     lhs.swap( rhs );
 }
 
-struct SocketStream : Socket {
+struct ReliableSocket : Socket {
 
-    SocketStream() :
-        _peer( nullptr ),
-        _stream( 1024 ),
-        _passive( false ),
-        _ready( false ),
-        _limit( 0 )
+    ReliableSocket() :
+            _peer( nullptr ),
+            _passive( false ),
+            _ready( false ),
+            _limit( 0 )
     {}
 
-    SocketStream( Node partner ) :
-        _peerHandle( std::move( partner ) ),
-        _peer( _peerHandle->data()->as< SocketStream >() ),
-        _stream( 1024 ),
-        _passive( true ),
-        _ready( true ),
-        _limit( 0 )
-    {}
+    ReliableSocket( Node partner ) :
+            _peerHandle( std::move( partner ) ),
+            _peer( _peerHandle->data()->as< ReliableSocket >() ),
+            _passive(false ),
+            _ready( true ),
+            _limit( 0 )
+    {
+        _peer->_peer = this;
+        _peer->_ready = true;
+    }
 
-    Socket &peer() override {
+    virtual Socket &peer() override {
         if ( !_peer )
             throw Error( ENOTCONN );
         return *_peer;
+    }
+
+    virtual Socket &peerHandle() override {
+        if ( !_peer || !_ready )
+            throw Error( ENOTCONN );
+        return *_peerHandle->data()->as<Socket>();
     }
 
     void abort() override {
@@ -464,11 +472,20 @@ struct SocketStream : Socket {
         _peer = nullptr;
     }
 
-    void listen( int limit ) override {
+    void setPeerHandle(Node handle) {
+        _peerHandle = std::move(handle);
+    }
+
+    bool canConnect() const override {
+        return _passive && !closed();
+    }
+
+    virtual void listen( int limit ) override {
         _passive = true;
         _limit = limit;
     }
-    Node accept() override {
+
+    virtual Node accept() override {
         if ( !_passive )
             throw Error( EINVAL );
 
@@ -476,45 +493,51 @@ struct SocketStream : Socket {
         while ( _backlog.empty() )
             FS_MAKE_INTERRUPT();
 
-        Node result( std::move( _backlog.front() ) );
+        Node client( std::move( _backlog.front() ) );
         _backlog.pop();
-        return result;
+        return client;
     }
 
-    void connected( Node self, Node model, bool allocateNew ) {
+    virtual void addBacklog( Node incomming ) override {
+        if ( _backlog.size() == _limit )
+            throw Error( ECONNREFUSED );
+        _backlog.push( std::move( incomming ) );
+    }
+
+protected:
+    Node _peerHandle;
+    ReliableSocket *_peer;
+    utils::Queue< Node > _backlog;
+    bool _passive;
+    bool _ready;
+    int _limit;
+};
+
+
+struct SocketStream : ReliableSocket {
+
+    SocketStream() :
+            _stream( 1024 )
+    {}
+
+    SocketStream( Node partner ) :
+            ReliableSocket(std::move(partner)),
+            _stream( 1024 )
+    { }
+
+    void connected( Node self, Node model ) override {
         if ( _peer )
             throw Error( EISCONN );
 
         SocketStream *m = model->data()->as< SocketStream >();
 
-        if ( allocateNew ) {
-            if ( !m->canConnect() )
-                throw Error( ECONNREFUSED );
-
-            _peerHandle = std::allocate_shared< INode >(
-                memory::AllocatorPure(),
-                Mode::GRANTS,
-                _peer = new( memory::nofail ) SocketStream( self )
-            );
-
-            m->addBacklog( _peerHandle );
-        }
-        else {
-            _peerHandle = std::move( model );
-            _peer = m;
-            _peer->_peerHandle = std::move( self );
-            _peer->_peer = this;
-        }
-    }
-
-    void connected( Node self, Node model ) override {
-        connected( std::move( self ), std::move( model ), true );
-    }
-
-    void addBacklog( Node incomming ) override {
-        if ( _backlog.size() == _limit )
+        if (!m)
+            throw Error( EBADF );
+        if ( !m->canConnect() )
             throw Error( ECONNREFUSED );
-        _backlog.push( std::move( incomming ) );
+
+        m->addBacklog(std::move(self));
+        _peerHandle = std::move(model);
     }
 
     bool canRead() const override {
@@ -525,9 +548,6 @@ struct SocketStream : Socket {
     }
     bool canReceive( size_t amount ) const override {
         return _stream.size() + amount <= _stream.capacity();
-    }
-    bool canConnect() const override {
-        return _passive && !closed();
     }
 
     void send( const char *buffer, size_t &length, Flags< flags::Message > fls ) override {
@@ -567,10 +587,10 @@ struct SocketStream : Socket {
         address = _peer->address();
     }
 
-
     void fillBuffer( const Address &, const char *, size_t & ) override {
         throw Error( EPROTOTYPE );
     }
+
     void fillBuffer( const char *buffer, size_t &length ) override {
         if ( closed() ) {
             abort();
@@ -580,15 +600,123 @@ struct SocketStream : Socket {
         length = _stream.push( buffer, length );
     }
 
+private:
+    storage::Stream _stream;
+};
+
+struct SeqPacketSocket : ReliableSocket {
+
+    SeqPacketSocket() {}
+
+    SeqPacketSocket(Node partner) :
+        ReliableSocket(std::move(partner))
+    {}
+
+    void connected( Node self, Node model ) override {
+        if ( _peer )
+            throw Error( EISCONN );
+
+        SeqPacketSocket *m = model->data()->as< SeqPacketSocket >();
+
+        if (!m)
+            throw Error( EBADF );
+        if ( !m->canConnect() )
+            throw Error( ECONNREFUSED );
+
+        m->addBacklog(std::move(self));
+        _peerHandle = std::move(model);
+    }
+
+    bool canRead() const override {
+        return !_packets.empty();
+    }
+
+    bool canWrite() const override {
+        return _peer->canReceive(0);
+    }
+
+    bool canReceive( size_t ) const override {
+        return !closed();
+    }
+
+    void sendTo( const char *buffer, size_t &length, Flags< flags::Message > fls, Node ) override {
+        send( buffer, length, fls );
+    }
+
+    void send( const char *buffer, size_t &length, Flags< flags::Message > fls ) override {
+        if ( !_peer )
+            throw Error( ENOTCONN );
+
+        if ( !_peerHandle->mode().userWrite() )
+            throw Error( EACCES );
+
+        if ( fls.has( flags::Message::DontWait ) && !_peer->canReceive( length ) )
+            throw Error( EAGAIN );
+        _peer->fillBuffer(buffer, length);
+
+    }
+
+    void fillBuffer( const Address &, const char *, size_t & ) override {
+        throw Error( EPROTOTYPE );
+    }
+
+    void fillBuffer( const char *buffer, size_t &length ) override {
+        if ( closed() ) {
+            abort();
+            throw Error( ECONNRESET );
+        }
+
+        _packets.emplace( buffer, length );
+    }
+
+    void receive( char *buffer, size_t &length, Flags< flags::Message > fls, Address &address ) override {
+
+        if ( fls.has( flags::Message::DontWait ) && _packets.empty() )
+            throw Error( EAGAIN );
+
+        if ( !_peer && !closed() )
+            throw Error( ENOTCONN );
+
+        while ( _packets.empty() )
+            FS_MAKE_INTERRUPT();
+
+        length = _packets.front().read( buffer, length );
+        if ( !fls.has( flags::Message::Peek ) )
+            _packets.pop();
+
+        address = _peer->address();
+    }
 
 private:
-    Node _peerHandle;
-    SocketStream *_peer;
-    storage::Stream _stream;
-    bool _passive;
-    bool _ready;
-    utils::Queue< Node > _backlog;
-    int _limit;
+    struct Packet {
+
+        Packet( const char *data, size_t length ) :
+                _data( data, data + length )
+        {}
+
+        Packet( const Packet & ) = delete;
+        Packet( Packet && ) = default;
+        Packet &operator=( Packet other ) {
+            swap( other );
+            return *this;
+        }
+
+        size_t read( char *buffer, size_t max ) const {
+            size_t result = std::min( max, _data.size() );
+            std::copy( _data.begin(), _data.begin() + result, buffer );
+            return result;
+        }
+
+        void swap( Packet &other ) {
+            using std::swap;
+            swap( _data, other._data );
+        }
+
+    private:
+        utils::Vector< char > _data;
+    };
+    utils::Queue< Packet > _packets;
+
 };
 
 struct SocketDatagram : Socket {
@@ -606,6 +734,11 @@ struct SocketDatagram : Socket {
         }
         throw Error( ENOTCONN );
     }
+
+    Socket &peerHandle() override {
+        throw Error( EOPNOTSUPP );
+    }
+
 
     bool canRead() const override {
         return !_packets.empty();
