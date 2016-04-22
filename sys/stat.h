@@ -25,7 +25,9 @@
 
 #include <sys/types.h>
 #include "../bits/stat.h"
+#if defined( __MAC_OS_X_VERSION_MAX_ALLOWED )
 typedef __darwin_socklen_t  socklen_t;
+#endif
 
 #ifdef __cplusplus
 extern "C" {
