@@ -865,6 +865,9 @@ int socket( int domain, int t, int protocol ) {
         case SOCK_DGRAM:
             type = SocketType::Datagram;
             break;
+        case SOCK_SEQPACKET:
+            type = SocketType::SeqPacket;
+            break;
         default:
             throw Error( EPROTONOSUPPORT );
         }

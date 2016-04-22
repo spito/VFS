@@ -277,6 +277,10 @@ struct SocketDescriptor : FileDescriptor {
         return _socket->peer();
     }
 
+    Socket &peerHandle() {
+        return _socket->peerHandle();
+    }
+
     const Socket::Address &address() const {
         return _socket->address();
     }

@@ -460,6 +460,9 @@ int Manager::socket( SocketType type, Flags< flags::Open > fl ) {
     case SocketType::Datagram:
         s = new( memory::nofail ) SocketDatagram;
         break;
+    case SocketType::SeqPacket:
+        s = new( memory::nofail ) SeqPacketSocket;
+        break;
     default:
         throw Error( EPROTONOSUPPORT );
     }
@@ -474,43 +477,59 @@ int Manager::socket( SocketType type, Flags< flags::Open > fl ) {
 }
 
 std::pair< int, int > Manager::socketpair( SocketType type, Flags< flags::Open > fl ) {
-    if ( type != SocketType::Stream )
+    if ( type != SocketType::Stream && type != SocketType::SeqPacket )
         throw Error( EOPNOTSUPP );
+    Node client, server;
+    if (type == SocketType::Stream) {
+        SocketStream *cl = new( memory::nofail ) SocketStream;
 
-    SocketStream *cl = new( memory::nofail ) SocketStream;
+        client = std::allocate_shared< INode >(
+                memory::AllocatorPure(),
+                Mode::GRANTS | Mode::SOCKET,
+                cl );
+        server = std::allocate_shared< INode >(
+                memory::AllocatorPure(),
+                Mode::GRANTS | Mode::SOCKET,
+                new( memory::nofail ) SocketStream(client) );
 
-    Node client = std::allocate_shared< INode >(
-        memory::AllocatorPure(),
-        Mode::GRANTS | Mode::SOCKET,
-        cl );
-    Node server = std::allocate_shared< INode >(
-        memory::AllocatorPure(),
-        Mode::GRANTS | Mode::SOCKET,
-        new( memory::nofail ) SocketStream );
+        cl->setPeerHandle(server);
+    }else {
+        SeqPacketSocket *cl = new( memory::nofail ) SeqPacketSocket;
 
-    cl->connected( client, server );
+        client = std::allocate_shared< INode >(
+                memory::AllocatorPure(),
+                Mode::GRANTS | Mode::SOCKET,
+                cl );
+        server = std::allocate_shared< INode >(
+                memory::AllocatorPure(),
+                Mode::GRANTS | Mode::SOCKET,
+                new( memory::nofail ) SeqPacketSocket(client) );
+
+        cl->setPeerHandle(server);
+    }
 
     return {
-        _getFileDescriptor(
-            std::allocate_shared< SocketDescriptor >(
-                memory::AllocatorPure(),
-                server,
-                fl
+            _getFileDescriptor(
+                    std::allocate_shared< SocketDescriptor >(
+                            memory::AllocatorPure(),
+                            server,
+                            fl
+                    )
+            ),
+            _getFileDescriptor(
+                    std::allocate_shared< SocketDescriptor >(
+                            memory::AllocatorPure(),
+                            client,
+                            fl
+                    )
             )
-        ),
-        _getFileDescriptor(
-            std::allocate_shared< SocketDescriptor >(
-                memory::AllocatorPure(),
-                client,
-                fl
-            )
-        )
     };
 }
 
 void Manager::bind( int sockfd, Socket::Address address ) {
     auto sd = getSocket( sockfd );
 
+    if (!sd) throw Error ( EDESTADDRREQ );
     Node current;
     utils::String name = address.value();
     std::tie( current, name ) = _findDirectoryOfFile( name );
@@ -536,12 +555,20 @@ void Manager::connect( int sockfd, const Socket::Address &address ) {
 
 int Manager::accept( int sockfd, Socket::Address &address ) {
     Node partner = getSocket( sockfd )->accept();
+    if(partner->data()->as<ReliableSocket>() == nullptr) {
+        throw Error ( EOPNOTSUPP );
+    }
     address = partner->data()->as< Socket >()->address();
-
+    Socket *socket;
+    if(partner->data()->as<SocketStream>() != nullptr) {
+        socket = new( memory::nofail ) SocketStream(std::move(partner));
+    }else {
+        socket = new( memory::nofail ) SeqPacketSocket(std::move(partner));
+    }
     return _getFileDescriptor(
         std::allocate_shared< SocketDescriptor >(
             memory::AllocatorPure(),
-            std::move( partner ),
+           std::allocate_shared<INode>(memory::AllocatorPure(),Mode::GRANTS | Mode::SOCKET, socket),
             flags::Open::NoFlags
         )
     );
