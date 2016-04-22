@@ -40,7 +40,7 @@ private:
 };
 
 struct File : DataItem {
-
+    //TODO lower: write documentation
     virtual bool read( char *, size_t, size_t & ) = 0;
     virtual bool write( const char *, size_t, size_t & ) = 0;
 
@@ -80,18 +80,20 @@ struct RegularFile : File {
     bool canWrite() const override {
         return true;
     }
-
+    
     bool read( char *buffer, size_t offset, size_t &length ) override {
         if ( offset >= _size ) {
             length = 0;
             return true;
         }
-        const char *source = _isSnapshot() ?
+        const char *source = _isSnapshot() ?            //copy on write
                           _roContent + offset :
                           _content.data() + offset;
+
         if ( offset + length > _size )
             length = _size - offset;
         std::copy( source, source + length, buffer );
+
         return true;
     }
 

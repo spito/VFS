@@ -74,6 +74,33 @@ struct FileDescriptor {
         return length;
     }
 
+    virtual long long read( utils::Vector< std::pair< char *, size_t > > &buf ) {
+        if (!_inode)
+            throw Error( EBADF );
+        if (!_flags.has( flags::Open::Read ))
+            throw Error( EBADF );
+
+        File *file = _inode->data()->as< File >();
+        if (!file)
+            throw Error( EBADF );
+        if (_flags.has( flags::Open::NonBlock ) && !file->canRead())   
+            throw Error( EAGAIN );
+
+        long long length = 0;		//combined length of all members of buf
+        for ( auto & dst : buf ) {
+            size_t originalLengthBuf = dst.second;
+            if ( !file->read( dst.first, _offset, dst.second ))
+                throw Error( EBADF );           
+            length += dst.second;
+            _setOffset( _offset + dst.second );
+            if (dst.second < originalLengthBuf) {      //nothing left to read
+                break;
+            }
+        }
+        
+        return length;
+    }
+
     virtual long long write( const void *buf, size_t length ) {
         if ( !_inode )
             throw Error( EBADF );
@@ -94,6 +121,33 @@ struct FileDescriptor {
             throw Error( EBADF );
 
         _setOffset( _offset + length );
+        return length;
+    }
+
+    virtual long long write( utils::Vector< std::pair< const char *, size_t > > &buf) {
+        if (!_inode)
+            throw Error( EBADF );
+        if (!_flags.has( flags::Open::Write ))
+            throw Error( EBADF );
+
+        File *file = _inode->data()->as< File >();
+        if (!file)
+            throw Error( EBADF );
+        if (_flags.has( flags::Open::NonBlock ) && !file->canWrite())
+            throw Error( EAGAIN );
+
+        if (_flags.has( flags::Open::Append ))
+            _offset = file->size();
+
+        long long length = 0;
+        for (auto & src : buf) {
+            if (!file->write( src.first, _offset, src.second )) {
+                throw Error( EBADF );
+            }
+            _setOffset( _offset + src.second );
+            length += src.second;
+        }
+
         return length;
     }
 

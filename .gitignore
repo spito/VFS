@@ -1,3 +1,11 @@
+# Build
+build/
+
+# Visual Studio
+
+# CLion
+.idea/
+
 # Windows image file caches
 Thumbs.db
 ehthumbs.db
@@ -44,3 +52,10 @@ bin/
 Network Trash Folder
 Temporary Items
 .apdisk
+*.suo
+*.opensdf
+VFS.sdf
+*.sln
+VFS.vcxproj
+*.user
+VFS.vcxproj.filters
