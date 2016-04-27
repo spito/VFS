@@ -9,7 +9,7 @@
 #ifndef __divine__
 #if defined( __MAC_OS_X_VERSION_MAX_ALLOWED )
 typedef __darwin_socklen_t         socklen_t;
-#elif
+#else
 typedef __socklen_t         socklen_t;
 #endif
 #else

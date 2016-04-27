@@ -25,7 +25,6 @@
 
 #include <sys/types.h>
 #include "../bits/stat.h"
-typedef __darwin_socklen_t  socklen_t;
 
 #ifdef __cplusplus
 extern "C" {
