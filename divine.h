@@ -1,8 +1,15 @@
 #ifndef __DIVINE_USR_H
 #define __DIVINE_USR_H
 
+#if defined __cplusplus
+#define __ASSERT_VOID_CAST static_cast< void >
+#else
+#define __ASSERT_VOID_CAST (void)
+#endif
+
 #undef assert
-#define assert( x ) __divine_assert( !!(x) )
+#define assert( x ) ((x) ? __ASSERT_VOID_CAST(0) : __divine_problem( 2, #x ))
+#define assume( x ) __divine_assume( !!(x) )
 
 #define AP( x ) __divine_ap( x )
 #define LTL( name, x ) extern const char * const __divine_LTL_ ## name = #x;
@@ -21,12 +28,14 @@ extern "C" {
 int __divine_new_thread( void (*entry)(void *), void *arg ) NOTHROW;
 int __divine_get_tid( void ) NOTHROW;
 
-void __divine_interrupt_mask( void ) NOTHROW;
+// returns previous state of the mask (0 = not masked before, 1 = masked before)
+int __divine_interrupt_mask( void ) NOTHROW;
 void __divine_interrupt_unmask( void ) NOTHROW;
-void __divine_interrupt( void ) NOTHROW;
+void __divine_interrupt( void ) NOTHROW __attribute__((deprecated));
 
 void __divine_assert( int value ) NOTHROW;
 void __divine_ap( int id ) NOTHROW;
+void __divine_assume( int value ) NOTHROW;
 
 void __divine_problem( int type, const char *data ) NOTHROW;
 
@@ -58,6 +67,7 @@ int __divine_choice( int n, ... ) NOTHROW;
 void *__divine_malloc( unsigned long size ) NOTHROW;
 void __divine_free( void *ptr ) NOTHROW;
 int __divine_heap_object_size( void *ptr ) NOTHROW;
+int __divine_is_private( void *ptr ) NOTHROW;
 
 /*
  * Copy memory. Doing a per-byte copy would destroy pointer maps, hence you are
