@@ -44,3 +44,10 @@ bin/
 Network Trash Folder
 Temporary Items
 .apdisk
+
+# misc
+*.o
+*.bc
+*.swp
+*.swo
+*~
