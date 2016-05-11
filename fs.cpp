@@ -678,7 +678,7 @@ int fchmod( int fd, mode_t mode ) {
         return -1;
     }
 }
-#if defined(__divine__)
+#if defined(__divine__) || defined( __divinecc__ )
 int alphasort( const struct dirent **a, const struct dirent **b ) {
     return std::strcoll( (*a)->d_name, (*b)->d_name );
 }

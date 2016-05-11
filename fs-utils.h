@@ -22,7 +22,7 @@
 
 #define FS_CHOICE_GOAL              0
 
-#ifdef __divine__
+#if defined( __divine__ ) || defined( __divinecc__ )
 # include <divine.h>
 # include <divine/problem.h>
 
